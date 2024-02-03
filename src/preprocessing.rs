@@ -9,7 +9,7 @@ type usizeBits = usize;
 #[allow(non_camel_case_types)]
 type usizeBytes = usize;
 #[allow(non_camel_case_types)]
-type u512 = [u128;4];
+pub type u512 = [u128;4];
 #[allow(non_camel_case_types)]
 type u128BytesArray = [u8; NUM_BYTES_128];
 #[allow(non_camel_case_types)]
@@ -128,7 +128,7 @@ fn build_incomplete_block(msg: &[u8], num_complete_blocks: u32) -> u512 {
 }
 
 // Returns 512bits blocks from a message to hash (provided as a byte list)
-pub fn cut_msg(msg: &[u8]) -> Vec<u512> {
+pub fn blockify_msg(msg: &[u8]) -> Vec<u512> {
     let mut blocks: Vec<u512> = Vec::new();
 
     let msg_size: usizeBits = msg.len()*BYTE_SIZE;
