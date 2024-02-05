@@ -81,8 +81,7 @@ fn add_padding(msg_last_block: u512, last_block_data_size: usizeBits, message_si
     let access_index: usize = last_block_data_size / 128;
 
     // this is by how much we need to bitshift the 1 to arrive right at data end
-    let num_bitshift = MESSAGE_BLOCK_SIZE - last_block_data_size;
-    let num_bitshift = num_bitshift - 128 * (num_bitshift / 128) - 1;
+    let num_bitshift = last_block_data_size - access_index * 128 + 1;
 
     msg_last_block[access_index] |= 1 << num_bitshift; // Append a 1 right after the message data
 
@@ -134,7 +133,7 @@ pub fn blockify_msg(msg: &[u8]) -> Vec<u512> {
     let msg_size: usizeBits = msg.len()*BYTE_SIZE;
     let num_complete_blocks: usize = msg_size / MESSAGE_BLOCK_SIZE;
     
-    for i in 1..num_complete_blocks+1 {
+    for i in 1..num_complete_blocks {
         // 0 .. 64 -> 64 .. 128 -> 128 .. 192 etc.
         let block_data: u512BytesArray = msg.get(NUM_BYTES_512 * i-1 .. NUM_BYTES_512 * i).expect("Failed to split msg as a valid 64 sized slice").try_into().unwrap();
         

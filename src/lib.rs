@@ -1,8 +1,6 @@
 mod preprocessing;
 mod constants;
 
-use std::num::Wrapping;
-
 use constants::ROUND_CONSTANTS;
 // Shadows f32::constants::SQRT_X from std library
 use constants::SQRT_2;
@@ -14,7 +12,7 @@ use constants::SQRT_13;
 use constants::SQRT_17;
 use constants::SQRT_19;
 
-fn transfer_to_msg_schedule(block_data: u128, message_schedule: &mut [u32; 4]) {
+fn transfer_to_msg_schedule(block_data: u128, message_schedule: &mut [u32]) {
     message_schedule[0] = (block_data >> 96) as u32;
     message_schedule[1] = (block_data >> 64) as u32;
     message_schedule[2] = (block_data >> 32) as u32;
@@ -26,13 +24,9 @@ fn create_message_schedule(block: [u128;4]) -> [u32; 64] {
 
     // Place the block data in the first 16 u32
     for i in 0..4 {
-        
-        // Turns a slice into a array reference of known size
-        let w_slice: &mut [u32;4] = &mut w[i*4..i*4+4].try_into().expect("Incorrect slice size, must be 4");
-        
         transfer_to_msg_schedule(
             block[i],
-            w_slice
+            &mut w[i*4..i*4+4]
         );
     }
 
@@ -40,33 +34,33 @@ fn create_message_schedule(block: [u128;4]) -> [u32; 64] {
     for i in 16..64 {
         let s_0 = u32::rotate_right(w[i-15], 7) ^ u32::rotate_right(w[i-15], 18) ^ (w[i-15] >> 3);
         let s_1 = u32::rotate_right(w[i-2], 17) ^ u32::rotate_right(w[i-2], 19) ^ (w[i-2] >> 10);
-        w[i] = w[i-16] + s_0 + w[i-7] + s_1;
+        w[i] = w[i-16].wrapping_add(s_0).wrapping_add(w[i-7]).wrapping_add(s_1);
     }
 
     w
 }
 
-fn compress_block(h: [Wrapping<u32>;8], w: &[u32; 64]) -> [Wrapping<u32>;8] {
+fn compress_block(h: [u32;8], w: &[u32; 64]) -> [u32;8] {
     let mut h = h; // make mutable
 
     let right_rot = u32::rotate_right;
 
     for i in 0..64 {
-        let s_1 = Wrapping(right_rot(h[4].0, 6) ^ right_rot(h[4].0, 11) ^ right_rot(h[4].0, 25));
+        let s_1 = right_rot(h[4], 6) ^ right_rot(h[4], 11) ^ right_rot(h[4], 25);
         let ch = (h[4] & h[5]) ^ ((!h[4]) & h[6]);
-        let tmp_1 = h[7] + s_1 + ch + Wrapping(ROUND_CONSTANTS[i]) + Wrapping(w[i]);
-        let s_0 = Wrapping(right_rot(h[0].0, 2) ^ right_rot(h[0].0, 13) ^ right_rot(h[0].0, 22));
+        let tmp_1 = h[7].wrapping_add(s_1).wrapping_add(ch).wrapping_add(ROUND_CONSTANTS[i]).wrapping_add(w[i]);
+        let s_0 = right_rot(h[0], 2) ^ right_rot(h[0], 13) ^ right_rot(h[0], 22);
         let maj = (h[0] & h[1]) ^ (h[0] & h[2]) ^ (h[1] ^ h[2]);
-        let tmp_2 = s_0 + maj;
+        let tmp_2 = s_0.wrapping_add(maj);
 
         h[7] = h[6];
         h[6] = h[5];
         h[5] = h[4];
-        h[4] = h[3] + tmp_1;
+        h[4] = h[3].wrapping_add(tmp_1);
         h[3] = h[2];
         h[2] = h[1];
         h[1] = h[0];
-        h[0] = tmp_1 + tmp_2;
+        h[0] = tmp_1.wrapping_add(tmp_2);
     }
 
     h
@@ -74,19 +68,11 @@ fn compress_block(h: [Wrapping<u32>;8], w: &[u32; 64]) -> [Wrapping<u32>;8] {
 
 pub fn hash(message: &[u8]) -> [u8;32] {
     // Initial hash value
-    let mut h: [Wrapping<u32>; 8] = [
-        Wrapping(SQRT_2), Wrapping(SQRT_3), Wrapping(SQRT_5),
-        Wrapping(SQRT_7), Wrapping(SQRT_11), Wrapping(SQRT_13), 
-        Wrapping(SQRT_17), Wrapping(SQRT_19)
+    let mut h: [u32; 8] = [
+        SQRT_2, SQRT_3, SQRT_5,
+        SQRT_7, SQRT_11, SQRT_13, 
+        SQRT_17, SQRT_19
         ];
-    println!("{}", h[0].0);
-    println!("{}", h[1].0);
-    println!("{}", h[2].0);
-    println!("{}", h[3].0);
-    println!("{}", h[4].0);
-    println!("{}", h[5].0);
-    println!("{}", h[6].0);
-    println!("{}", h[7].0);
 
     let blocks = preprocessing::blockify_msg(message);
 
@@ -95,20 +81,20 @@ pub fn hash(message: &[u8]) -> [u8;32] {
         let h_comp = compress_block(h.clone(), &w);
 
         // Add the compressed block to the current hash
-        h[0] += h_comp[0];
-        h[1] += h_comp[1];
-        h[2] += h_comp[2];
-        h[3] += h_comp[3];
-        h[4] += h_comp[4];
-        h[5] += h_comp[5];
-        h[6] += h_comp[6];
-        h[7] += h_comp[7];
+        h[0] = h[0].wrapping_add(h_comp[0]);
+        h[1] = h[1].wrapping_add(h_comp[1]);
+        h[2] = h[2].wrapping_add(h_comp[2]);
+        h[3] = h[3].wrapping_add(h_comp[3]);
+        h[4] = h[4].wrapping_add(h_comp[4]);
+        h[5] = h[5].wrapping_add(h_comp[5]);
+        h[6] = h[6].wrapping_add(h_comp[6]);
+        h[7] = h[7].wrapping_add(h_comp[7]);
     }
 
     // Prepare the final hash as a byte array
     let mut hash: [u8; 32] = [0; 32];
     for i in 0..8 {
-        let bytes = u32::to_be_bytes(h[i].0);
+        let bytes = u32::to_be_bytes(h[i]);
         hash[i*4] = bytes[0];
         hash[i*4+1] = bytes[1];
         hash[i*4+2] = bytes[2];
