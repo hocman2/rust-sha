@@ -1,6 +1,8 @@
 mod preprocessing;
 mod constants;
 
+use std::num::Wrapping;
+
 use constants::ROUND_CONSTANTS;
 // Shadows f32::constants::SQRT_X from std library
 use constants::SQRT_2;
@@ -44,14 +46,16 @@ fn create_message_schedule(block: [u128;4]) -> [u32; 64] {
     w
 }
 
-fn compress_block(h: [u32;8], w: &[u32; 64]) -> [u32;8] {
+fn compress_block(h: [Wrapping<u32>;8], w: &[u32; 64]) -> [Wrapping<u32>;8] {
     let mut h = h; // make mutable
 
+    let right_rot = u32::rotate_right;
+
     for i in 0..64 {
-        let s_1 = u32::rotate_right(h[4], 6) ^ u32::rotate_right(h[4], 11) ^ u32::rotate_right(h[4], 25);
+        let s_1 = Wrapping(right_rot(h[4].0, 6) ^ right_rot(h[4].0, 11) ^ right_rot(h[4].0, 25));
         let ch = (h[4] & h[5]) ^ ((!h[4]) & h[6]);
-        let tmp_1 = h[7] + s_1 + ch + ROUND_CONSTANTS[i] + w[i];
-        let s_0 = u32::rotate_right(h[0], 2) ^ u32::rotate_right(h[0], 13) ^ u32::rotate_right(h[0], 22);
+        let tmp_1 = h[7] + s_1 + ch + Wrapping(ROUND_CONSTANTS[i]) + Wrapping(w[i]);
+        let s_0 = Wrapping(right_rot(h[0].0, 2) ^ right_rot(h[0].0, 13) ^ right_rot(h[0].0, 22));
         let maj = (h[0] & h[1]) ^ (h[0] & h[2]) ^ (h[1] ^ h[2]);
         let tmp_2 = s_0 + maj;
 
@@ -70,7 +74,19 @@ fn compress_block(h: [u32;8], w: &[u32; 64]) -> [u32;8] {
 
 pub fn hash(message: &[u8]) -> [u8;32] {
     // Initial hash value
-    let mut h: [u32; 8] = [SQRT_2, SQRT_3, SQRT_5, SQRT_7, SQRT_11, SQRT_13, SQRT_17, SQRT_19];
+    let mut h: [Wrapping<u32>; 8] = [
+        Wrapping(SQRT_2), Wrapping(SQRT_3), Wrapping(SQRT_5),
+        Wrapping(SQRT_7), Wrapping(SQRT_11), Wrapping(SQRT_13), 
+        Wrapping(SQRT_17), Wrapping(SQRT_19)
+        ];
+    println!("{}", h[0].0);
+    println!("{}", h[1].0);
+    println!("{}", h[2].0);
+    println!("{}", h[3].0);
+    println!("{}", h[4].0);
+    println!("{}", h[5].0);
+    println!("{}", h[6].0);
+    println!("{}", h[7].0);
 
     let blocks = preprocessing::blockify_msg(message);
 
@@ -92,7 +108,11 @@ pub fn hash(message: &[u8]) -> [u8;32] {
     // Prepare the final hash as a byte array
     let mut hash: [u8; 32] = [0; 32];
     for i in 0..8 {
-        hash.copy_from_slice(u32::to_be_bytes(h[i]).as_slice());
+        let bytes = u32::to_be_bytes(h[i].0);
+        hash[i*4] = bytes[0];
+        hash[i*4+1] = bytes[1];
+        hash[i*4+2] = bytes[2];
+        hash[i*4+3] = bytes[3];
     }
     
     hash
