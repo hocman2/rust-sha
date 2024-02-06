@@ -60,7 +60,7 @@ fn bytes_to_be_u512(block_data: u512BytesArray) -> u512 {
 // Returns a u128 that contains a u64 with message size in big endian in the least significant bits
 // 0b000...[100101010100] <-- this block is the message size in big endian
 fn get_msg_size_as_be_u64(message_size: usizeBytes) -> u128 {
-    0 | u64::to_be(message_size as u64) as u128
+    u64::to_be(message_size as u64) as u128
 }
 
 // Returns a block that is fully padded, meaning the most significant bit is 1 and the 64 least significant bits are the message size in big endian
