@@ -12,22 +12,12 @@ use constants::SQRT_13;
 use constants::SQRT_17;
 use constants::SQRT_19;
 
-fn transfer_to_msg_schedule(block_data: u128, message_schedule: &mut [u32]) {
-    message_schedule[0] = (block_data >> 96) as u32;
-    message_schedule[1] = (block_data >> 64) as u32;
-    message_schedule[2] = (block_data >> 32) as u32;
-    message_schedule[3] = (block_data >> 0) as u32;
-}
-
-fn create_message_schedule(block: [u128;4]) -> [u32; 64] {
+fn create_message_schedule(block: [u32;16]) -> [u32; 64] {
     let mut w: [u32; 64] = [0; 64];
 
     // Place the block data in the first 16 u32
-    for i in 0..4 {
-        transfer_to_msg_schedule(
-            block[i],
-            &mut w[i*4..i*4+4]
-        );
+    for i in 0..16 {
+        w[i] = block[i];
     }
 
     // Expand data to the whole message schedule array
