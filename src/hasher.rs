@@ -1,4 +1,25 @@
 use num::{traits::{ToBytes, WrappingAdd}, PrimInt};
+
+// These are the index for the working vars since they are laid out in an array
+#[allow(non_upper_case_globals)]
+const a_: usize = 0;
+#[allow(non_upper_case_globals)]
+const b_: usize = 1;
+#[allow(non_upper_case_globals)]
+const c_: usize = 2;
+#[allow(non_upper_case_globals)]
+const d_: usize = 3;
+#[allow(non_upper_case_globals)]
+const e_: usize = 4;
+#[allow(non_upper_case_globals)]
+const f_: usize = 5;
+#[allow(non_upper_case_globals)]
+const g_: usize = 6;
+#[allow(non_upper_case_globals)]
+const h_: usize = 7;
+
+// A generic struct with functions for SHA hashing.
+// Generic parameters were only tested for SHA-compliant values (<u32, 32, 64> and <u64; 64; 80>)
 pub struct Hasher<T, const HASH_SIZE_BYTES: usize, const MSG_SCHEDULE_SIZE: usize>
 where T: 
     PrimInt +
@@ -19,6 +40,7 @@ where T:
         Self { k }
     }
 
+    // These are some pretty standard bitwise functions that are used throughout hasing process
     #[inline(always)]
     fn choice(a: T, b: T, c: T) -> T {
         return (a & b) ^ ((!a) & c)
@@ -48,20 +70,20 @@ where T:
 
     //h are the "a b c d e f g h" vars from the original implementation
     pub fn compress_block(&self, h: &[T;8], w: [T; MSG_SCHEDULE_SIZE], sig_0: fn (x: T) -> T, sig_1: fn (x: T) -> T) -> [T;8] {
-        let mut h = h.clone();
+        let mut h = h.clone(); // Actually initialize the working variables
 
         for i in 0..MSG_SCHEDULE_SIZE {
-            let tmp_1 = h[7].wrapping_add(&sig_1(h[4])).wrapping_add(&Self::choice(h[4], h[5], h[6])).wrapping_add(&self.k[i]).wrapping_add(&w[i]);
-            let tmp_2 = sig_0(h[0]).wrapping_add(&Self::majority(h[0], h[1], h[2]));
+            let tmp_1 = h[h_].wrapping_add(&sig_1(h[e_])).wrapping_add(&Self::choice(h[e_], h[f_], h[g_])).wrapping_add(&self.k[i]).wrapping_add(&w[i]);
+            let tmp_2 = sig_0(h[a_]).wrapping_add(&Self::majority(h[a_], h[b_], h[c_]));
 
-            h[7] = h[6];
-            h[6] = h[5];
-            h[5] = h[4];
-            h[4] = h[3].wrapping_add(&tmp_1);
-            h[3] = h[2];
-            h[2] = h[1];
-            h[1] = h[0];
-            h[0] = tmp_1.wrapping_add(&tmp_2);
+            h[h_] = h[g_];
+            h[g_] = h[f_];
+            h[f_] = h[e_];
+            h[f_] = h[d_].wrapping_add(&tmp_1);
+            h[f_] = h[c_];
+            h[c_] = h[b_];
+            h[b_] = h[a_];
+            h[a_] = tmp_1.wrapping_add(&tmp_2);
         }
 
         h
@@ -80,14 +102,14 @@ where T:
         
                 // Add the compressed block to the current hash
                 // 🖕 loops
-                h[0] = h_comp[0].wrapping_add(&h[0]);
-                h[1] = h_comp[1].wrapping_add(&h[1]);
-                h[2] = h_comp[2].wrapping_add(&h[2]);
-                h[3] = h_comp[3].wrapping_add(&h[3]);
-                h[4] = h_comp[4].wrapping_add(&h[4]);
-                h[5] = h_comp[5].wrapping_add(&h[5]);
-                h[6] = h_comp[6].wrapping_add(&h[6]);
-                h[7] = h_comp[7].wrapping_add(&h[7]);
+                h[0] = h_comp[a_].wrapping_add(&h[0]);
+                h[1] = h_comp[b_].wrapping_add(&h[1]);
+                h[2] = h_comp[c_].wrapping_add(&h[2]);
+                h[3] = h_comp[d_].wrapping_add(&h[3]);
+                h[4] = h_comp[e_].wrapping_add(&h[4]);
+                h[5] = h_comp[f_].wrapping_add(&h[5]);
+                h[6] = h_comp[g_].wrapping_add(&h[6]);
+                h[7] = h_comp[h_].wrapping_add(&h[7]);
             }
         
             h
